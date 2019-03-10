@@ -1,0 +1,45 @@
+---
+title: <center><h1> 5104 Project</h1></center><br />
+author: <center>Yiu Chung WONG 1155017920</center>
+date: <center>`r format(Sys.time(), '%d %B, %Y')`</center>
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+  word_document: default
+--- 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+set.seed(5104)
+```
+
+## Download Data
+
+```{r Download data}
+redUrl <- "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+whiteURL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv"
+
+red <- read.csv(redUrl, sep = ";")
+white <- read.csv(whiteURL, sep = ";")
+
+head(drug.use)
+```
+
+## Clean Data
+
+* Add red/white label
+
+```{r pressure, echo=FALSE}
+red <- red %>% mutate(type = "Red")
+white <- white %>% mutate(type = "White")
+
+wine = rbind(red, white) %>%
+                       mutate(type = factor(type))
+
+
+head(wine)
+```
+
+

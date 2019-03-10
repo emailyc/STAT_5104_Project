@@ -1,0 +1,68 @@
+---
+title: <center><h1> 5104 Project</h1></center><br />
+author: <center>Yiu Chung WONG 1155017920</center>
+date: <center>`r format(Sys.time(), '%d %B, %Y')`</center>
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+  word_document: default
+--- 
+
+```{r setup, include=TRUE, echo = TRUE, results = 'hide'}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, results = TRUE)
+
+#Prepare environment    
+set.seed(5104)
+```
+
+# Overview
+This report explores the Weight Lifting Exercises Dataset and attempt to predict the type of performance based on data from various sensors on the body.
+
+##Data
+
+The data for this project come from [this source](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har) or [this source](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv). 
+
+###Load data
+1. The first document is the dataset for training the model.
+2. The second document contains data which we are trying to predict.
+```{r, echo=TRUE}
+#load data from working directory
+trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+validationURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+originalTrain <- read.csv(trainURL, header = TRUE)
+validationSet <- read.csv(validationURL, header = TRUE)
+```
+
+###Data cleaning
+The data are further cleaned by:  
+* Removing the first seven fields which are just descriptive data  
+* Removing near zero variance fields  
+* Removing fields with mostly NA  
+
+```{r, echo=TRUE}
+#Remove the first seven columns
+originalTrain <- originalTrain[,-(1:7)];
+
+#Remove NearZeroVariance variables
+nzv <- caret::nearZeroVar(originalTrain,saveMetrics=TRUE)
+originalTrain <- originalTrain[,nzv$nzv == FALSE]
+
+#Clean variables with mostly NA
+trainNA <- apply(originalTrain, 2, function(col){sum(is.na(col))/length(col)})
+originalTrain <- originalTrain[,which(trainNA < .1)]
+```
+
+###Overview of dataset
+```{r}
+str(originalTrain)
+```
+
+### Pre-processing
+The training data set is sliced into 70% for training and 30% for testing
+```{r, echo=TRUE}
+#Data slicing
+inTrain <- caret::createDataPartition(y=originalTrain$classe, p=0.70, list=FALSE)
+train <- originalTrain[inTrain,]
+test <- originalTrain[-inTrain,]
+```
