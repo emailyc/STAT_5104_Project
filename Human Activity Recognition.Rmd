@@ -1,0 +1,319 @@
+---
+title: <center><h1> 5104 Project</h1></center><br />
+author: <center>Yiu Chung WONG 1155017920</center>
+date: <center>`r format(Sys.time(), '%d %B, %Y')`</center>
+output:
+  pdf_document: default
+  html_document:
+    keep_md: yes
+  word_document: default
+--- 
+
+```{r setup, include=TRUE, echo = TRUE, results = 'hide', message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, results = TRUE, message=FALSE, warning=FALSE);
+
+#Prepare environment    
+set.seed(5104);
+```
+
+```{r libraries}
+check.packages <- function(pkg)
+{
+    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])];
+    if (length(new.pkg)) 
+    {
+      install.packages(new.pkg, dependencies = TRUE);
+      #sapply(pkg, require, character.only = TRUE);
+    }
+}
+
+# packeges required by project
+packages<-c("caret",
+            "rpart",
+            "e1071",
+            "klaR",
+            "rattle",
+            "doParallel",
+            "parallel",
+            "randomForest",
+            "gbm",
+            "MLmetrics",
+            "dplyr",
+            "ggplot2",
+            "GGally",
+            "lattice");
+check.packages(packages);
+
+library(dplyr);
+```
+
+# Overview
+This report explores the Weight Lifting Exercises Dataset and attempt to predict the type of performance based on data from various sensors on the body.
+
+##Data
+
+The data for this project come from [this source](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har) or [this source](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv). 
+
+This data set is unique in a way that while there are many variables, each are fundamentally the same: each set of three columns represents a gyroscope attached on different parts of the body. Each gyroscope generates data according to it's rotation around a spatial axis, giving spatial data on three dimentions. Hence all 53 columns are tantamount to each other. Since each perdictor has well-defined meaning. they should not be scaled because this will cause distortion. 
+* Same scale
+* Same range
+* All continous
+
+So no transformation needed. 
+
+###Load data
+1. The first document is the dataset for training the model.
+2. The second document contains data which we are trying to predict.
+```{r get data}
+trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv";
+testURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv";
+
+if (file.exists("pml-training.csv"))
+{
+  originalTrain <- read.csv("pml-training.csv", header = TRUE);
+} else
+{
+  originalTrain <- read.csv(trainURL, header = TRUE);
+}
+
+if (file.exists("pml-testing.csv"))
+{
+  originalTest <- read.csv("pml-testing.csv", header = TRUE);
+} else
+{
+  originalTest <- read.csv(testURL, header = TRUE);
+}
+
+originalTest$problem_id <- NULL;
+originalTest$classe <- c("B", "A", "B", "A", "A", "E", "D", "B", "A", "A", "B", "C", "B", "A", "E", "E", "A", "B", "B", "B");
+
+data <- rbind(originalTrain, originalTest);       #merge original training and test dataset
+data <- data[sample(nrow(data)),];                #randomise whole dataset
+```
+
+###Data cleaning
+The data are further cleaned by:  
+* Removing the first seven fields which are just descriptive data  
+* Removing near zero variance fields  
+* Removing fields with mostly NA  
+
+```{r data cleaning}
+#Remove the first seven columns
+data <- data[,-(1:7)];
+
+#Remove NearZeroVariance variables
+nzv <- caret::nearZeroVar(data, saveMetrics=TRUE);
+data <- data[,nzv$nzv == FALSE];
+
+#Clean variables with mostly NA
+dataNA <- apply(data, 2, function(col){sum(is.na(col))/length(col)});
+data <- data[,which(dataNA < .1)];
+```
+
+### Pre-processing
+The training data set is sliced into 80% for training and 20% for testing.
+```{r data splitting}
+#Data slicing
+inTrain <- caret::createDataPartition(y=data$classe, p=0.80, list=FALSE);
+train <- data[inTrain,];
+test <- data[-inTrain,];
+```
+
+###Overview of dataset
+```{r overview of data}
+str(train);
+```
+
+###Principal Component Analysis
+
+Principal Component Analysis (PCA) is a dimention reduction technique. A reduced dataset allows faster processing and smaller storage. In the context of data mining, PCA reduce the number of variables to be used in a model by focusing only on the components accounting for the majority of the variance. Highly correlated variables are also removed as a result of PCA.
+
+In this report, PCA is perofrmed on the original dataset to reduce the number of dimention while retaining 99% of the information.
+```{r PCA}
+prComp <- caret::preProcess(train[,-length(train)], method = "pca", thresh = 0.99);
+
+trainPC <- predict(prComp, train[,1:ncol(train)-1]);
+trainPC$classe <- train$classe;
+testPC <- predict(prComp, test[,1:ncol(test)-1]);
+testPC$classe <- test$classe;
+```
+Here, PCA is able to reduce the dimention of the datasets from `r ncol(data) - 1` to `r ncol(trainPC)` while retaining 99% of the information. This reduces model complexity and improves scalibility. 
+
+As a side note, PCA is ususlly performed on scaled/standardised dataset to prevent the resulting principle sub-space being dominated by variables with large scales. As mentioned above, because the variables in the dataset are of similar nature, scaling or standardisation provdes no added benifits. Hence such procedures are not used. 
+
+###Graphs
+```{r}
+gpairs_lower <- function(g)
+{
+    g$plots <- g$plots[-(1:g$nrow)];
+    g$yAxisLabels <- g$yAxisLabels[-1];
+    g$nrow <- g$nrow - 1;
+    
+    g$plots <- g$plots[-(seq(g$ncol, length(g$plots), by = g$ncol))];
+    g$xAxisLabels <- g$xAxisLabels[-g$ncol];
+    g$ncol <- g$ncol - 1;
+    
+    return(g);
+}
+
+g <- ggpairs(trainPC[, c(1, 10, 20, 30)],
+             upper  = list(continuous = "blank"),
+             diag  = list(continuous = "blankDiag"),
+             lower  = list(continuous = "points", 
+                           mapping = ggplot2::aes(colour = trainPC$classe)
+                           )
+             );
+             
+```
+
+
+###Classification And REgression Training (caret) ([Help](http://topepo.github.io/caret/index.html))
+
+* machine learning algorithms in `caret` package
+	- linear discriminant analysis
+	- regression
+	- naive Bayes
+	- support vector machines
+	- classification and regression trees
+	- random forests
+	- boosting
+	- many others
+* `caret` provides uniform framework to build/predict using different models
+	- create objects of different classes for different algorithms, and `caret` package allows algorithms to be run the same way through `predict()` function
+
+###Model Specification and Cross Validation
+Learnign models in this report will be genereted using the `caret::train` function.
+`caret::train` accepts a `trControl` parameter to control the computational nuances of the train function.
+
+####Choosing between LOOCV and K-Fold
+Leave-One-Out Cross-Validation (LOOCV) and K-Fold are common resampling methods for accessing model performance. While LOOCV estimates test error with lowest bias (averaging valodation errors across n models), K-Fold CV is much less computationally intensive. Yet there is another advantage to using K-fold CV. This has to do with a bias-variance trade-off. 
+
+Estimates produced by LOOCV is plagued by high variance compared to that produced by K-fold CV. This is because each of the n validation errors in LOOCV are produced by models trained on virtually identical dataset. The final statistic is an average of the n validation errors which are highly positively correlated. On the other hand, K-fold CV outputs K (which is usually much less than n) validation errors which are less correated as there are less overlap among models. The average of strongly correlated quantities has higher variance than the average of weakly correlated quantities; hence the estimated test error from LOOCV tends to have higher variance that that from K-fold. 
+
+The dataset in the report consists of relatively large number of observations (`r ncol(trainPC)` rows). Hence a 10 fold cross-validation is performed.
+
+####Performance Measures for Multi-Class Problems
+
+* Accuracy and Kappa
+* RMSE and $R^{2}$
+* Area Under ROC Curve
+* Logarithmic Loss
+
+```{r model trainControl}
+tc <- caret::trainControl(method = "cv", #resampling method = cross validation
+                          number = 10,   #10-fold validation
+                          classProbs = TRUE,
+                          summaryFunction = caret::multiClassSummary,
+                          verboseIter=FALSE,
+                          allowParallel=TRUE);
+
+metric <- "logLoss";
+
+cl <- parallel::makeCluster(parallel::detectCores()- 1);#Parallel Processing, leaves you one core for other stuff.
+                                                        #Plz try not to do CPU intensive tasks while modelling.
+doParallel::registerDoParallel(cl);
+```
+
+##Lazy learners
+```{r lazy learners}
+if (file.exists("nb.rds"))
+{
+        nb <- readRDS(file = "nb.rds");
+} else
+{
+        nb <- caret::train(classe ~ ., data = trainPC, method = "nb", metric = metric, trControl= tc);       #naive bayes
+        saveRDS(nb, file = "nb.rds");
+}
+
+if (file.exists("knn.rds"))
+{
+        knn <- readRDS(file = "knn.rds");                                                                       
+} else
+{
+        knn <- caret::train(classe ~ ., data = trainPC, method = "knn", metric = metric, trControl= tc);     #knn
+        saveRDS(knn, file = "knn.rds");
+}
+```
+
+###Multinomial logistic regression
+```{r multinomial logistic regression}
+
+if (file.exists("multinom.rds"))
+{
+        multinom <- readRDS(file = "multinom.rds");
+} else
+{
+        multinom <- caret::train(classe ~ ., data = trainPC, method = "multinom", metric = metric, trControl= tc);
+        saveRDS(multinom, file = "multinom.rds");
+}
+```
+
+###Tree based models
+tree-based methods tend to perform well on unprocessed data (i.e. without normalizing, centering, scaling features).
+
+Decision Trees often produce predictions with low bias but high variance. The more complex the tree, the more apparent this becomes (overfitting). Methods have been proposed to overcome this issue. This includes Bootstrap Aggregation (Bagging), as well as Random Forest. 
+
+The idea behind tree bagging is to create many trees, each trained from bootstrapped data from the original data set. Each trees are slightly different from each other because they are trained with mildly different datasets. Classification decision is then performed by popular vote across all trees. This method reduces variance by averaging decisions among many trees. There is a caveat though: tress turn out to be very similar to each other when there exists a (or few) extremely strong predictor, following by some moderately strong predictors. Each tree will have similar node splitting because of these strong predictors, which renders each trees to have practicality the same decision rules. Unfortunately, as mentioned above, the variance of the averages of highly correlated quantities is also high. This means tree bagging provides little improvments in terms of variance reduction. 
+
+Random Forest enhances tree bagging through a tweak: at each node split, the algorithm randomly picks a subset of size $m$ predictors out of all $p$, then choose the best predictor for this node split as normally seen in decision trees. This way, each trees are more likely to be different from each other. And hence the their averages are less varying. The choice of $m$ is often the square root of $p$ but other method of chosing m also exists.
+```{r tree_models}
+
+if (file.exists("ctree.rds"))
+{
+        ctree <- readRDS(file = "ctree.rds");
+} else
+{
+        ctree <- caret::train(classe ~ ., data = trainPC, method = "rpart", metric = metric, trControl= tc); #decision tree
+        saveRDS(ctree, file = "ctree.rds");
+}
+
+if (file.exists("treebag.rds"))
+{
+        treebag <- readRDS(file = "treebag.rds");
+} else
+{
+        treebagGrid <- expand.grid(.mtry = ncol(trainPC) - 1);
+        treebag <- caret::train(classe ~ ., data = trainPC, method = "rf", metric = metric, tuneGrid = treebagGrid, trControl= tc); #bagging
+        saveRDS(treebag, file = "treebag.rds");
+}
+
+if (file.exists("rf.rds"))
+{
+        rf <- readRDS(file = "rf.rds");
+} else
+{
+        rfGrid <- expand.grid(.mtry = sqrt(ncol(trainPC) - 1));
+        rf <- caret::train(classe ~ ., data = trainPC, method = "rf", metric = metric, tuneGrid = rfGrid, trControl= tc);   #Random Forest
+        saveRDS(rf, file = "rf.rds");
+}
+
+
+```
+Note that in the code above, both models `treebag` and `rf` employ the training method rf. This is because tree bagging is in fact a special case of Random Forest where $m$ = $p$. 
+
+###Neuro-Net
+```{r neuro_net}
+if (file.exists("NN.rds"))
+{
+        NN <- readRDS(file = "NN.rds");
+} else
+{
+        nnetGrid <-  expand.grid(
+                size = seq(from = 1, to = 10, by = 1),
+                decay = c(0.5, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7));
+        NN <- caret::train(classe ~ ., data = trainPC, method = "nnet", metric = metric, tuneGrid = nnetGrid, trControl= tc, verbose=FALSE);
+        saveRDS(NN, file = "NN.rds");
+}
+```
+
+```{r}
+#remember to run this after training model(s)!!!
+parallel::stopCluster(cl);
+```
+
+##Confusion Matrices of final model
+```{r}
+caret::confusionMatrix(predict(knn), trainPC$classe);
+caret::confusionMatrix(predict(knn, testPC), testPC$classe); #don't use testPC until end of report
+#talk about why choose soecific model first. 
+```
