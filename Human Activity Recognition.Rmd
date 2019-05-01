@@ -156,14 +156,14 @@ gpairs_lower <- function(g)
     return(g);
 }
 
-g <- ggpairs(trainPC[, c(1, 10, 20, 30)],
-             upper  = list(continuous = "blank"),
-             diag  = list(continuous = "blankDiag"),
-             lower  = list(continuous = "points", 
-                           mapping = ggplot2::aes(colour = trainPC$classe)
-                           )
-             );
-             
+g <- GGally::ggpairs(trainPC[, c(1:4)],
+                     upper  = list(continuous = "blank"),
+                     diag  = list(continuous = "blankDiag"),
+                     lower  = list(continuous = "points",
+                                   mapping = ggplot2::aes(colour = trainPC$classe)
+                                   )
+                     );
+gpairs_lower(g)            
 ```
 
 
