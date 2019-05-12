@@ -3,28 +3,34 @@ title: STAT5104 Data Mining Project
 header-includes:
     - \usepackage{setspace}\doublespacing
     - \usepackage{float}
-author:
-  - CHAN Yiu Fung (1155010561)
-  - CHUNG Wai Tung (1155118014)
-  - LAM Siu Hung (1006201460)
-  - LAU Chiu Kit (1155120306)
-  - WONG Tsz Wing (1004666311)
-  - WONG Yiu Chung (1155017920)
+author: | 
+  | CHAN Yiu Fung (1155010561)
+  | CHUNG Wai Tung (1155118104)
+  | LAM Siu Hung (1006201460)
+  | LAU Chiu Kit (1155120306)
+  | WONG Tsz Wing (1004666311)
+  | WONG Yiu Chung (1155017920)
 date: <center>`r format(Sys.time(), '%d %B, %Y')`</center>
 abstract: |
-  This report explores the possibility of predicting human movement using spatial data of exercises. Seven data mining models are used to extract latent pattern from the dataset. The present study is successful in predicting various types of human physical movements with extremely high accuracy.  
+  This report explores the possibility of predicting human movement using spatial data of exercises. Seven data mining models are used to extract latent pattern from the dataset. The present study is successful in predicting various types of human physical movements with extremely high accuracy. Work are divided evenly among authors.
   
 output:
   pdf_document:
-    fig_caption: true
     number_sections: true
+    df_print: kable
+    highlight: tango
+    fig_caption: true
   html_document:
     keep_md: no
     toc: true # table of content true
-    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
     number_sections: true  ## if you want number sections at each table header
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
+    code_folding: show
   word_document: default
 bibliography: r-references.bibtex
 csl: apa.csl  
@@ -35,12 +41,19 @@ nocite: '@*'
 \tableofcontents
 \newpage
 ```{r, echo=FALSE, results='hide'}
-remove(list=ls()); gc();
+remove(list=ls());
+gc();
 ```
 
 ```{r setup, include=TRUE, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE}
 #Prepare environment 
-knitr::opts_chunk$set(echo = TRUE, cache=TRUE, results = TRUE, message=FALSE, warning=FALSE);
+if (knitr::is_latex_output())
+{
+  knitr::opts_chunk$set(echo = FALSE, cache=TRUE, results = TRUE, message=FALSE, warning=FALSE);
+} else if (knitr::is_html_output())
+{
+  knitr::opts_chunk$set(echo = TRUE, cache=TRUE, results = TRUE, message=FALSE, warning=FALSE);
+}
 ```
 
 ```{r libraries}
@@ -68,7 +81,10 @@ packages<-c("caret",
             "dplyr",
             "ggplot2",
             "GGally",
-            "lattice");
+            "lattice",
+            "magrittr",
+            "plotly",
+            "DT");
 check.packages(packages);
 
 library(dplyr);
@@ -79,28 +95,27 @@ library(caret);
 set.seed(5104);
 ```
 
-
+\newpage
 # Introduction
 The research topic, Human Activity Recognition (HAR), is becoming more and more popular among the computing research community. In the traditional HAR research, researchers mainly focused on predicting what activity a person was performing at a specific point of time. Meanwhile, latest researchers have shifted the focus on ¡§how well¡¨ the activities have been performed.  In real-life, we can apply the ideas, for example, in sports training. 
-In this report, we explored the Weight Lifting Exercises Dataset [@velloso2013qualitative] and attempted to assess if the participants performed the specific weight lifting exercise, Unilateral Dumbbell Biceps Curl (hereafter refers to ¡§the exercise¡¨), correctly from the data collected via various sensors attached on different parts of the body, which includes arm, belt, forearm, and dumbbell.  The type of mistakes in the exercise can also be identified.
-Six male participants aged between 20-28 years were asked to wear a number of body sensors to perform one set of 10 repetitions of the exercise. Based on the sensor data collected, we can trace the outcome of the performance accordingly.  The performance outcome can be grouped into five classes, one corresponding to the specified execution of the exercise, while the other 4 classes corresponding to some common mistakes. Each sensor generated a set of readings in three dimensions.
+In this report, we explored the Weight Lifting Exercises Dataset and attempted to assess if the participants performed the specific weight lifting exercise, Unilateral Dumbbell Biceps Curl (hereafter refers to ¡§the exercise¡¨), correctly from the data collected via various sensors attached on different parts of the body, which includes arm, belt, forearm, and dumbbell.  The type of mistakes in the exercise can also be identified.
+Six male participants aged between 20-28 years were asked to wear a number of body sensors to perform one set of 10 repetitions of the exercise. Based on the sensor data collected, we can trace the outcome of the performance accordingly.  The performance outcome can be grouped into five classes, one corresponding to the specified execution of the exercise, while the other 4 classes corresponding to some common mistakes. Each sensor generated a set of readings in three dimensions [@velloso2013qualitative].
 
 
 # The Data
 
-The data for this project come from [this source](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv). 
+The data for this project come from [this source](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv): https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv. 
 
-The dataset contains 160 variables, which include one target variable ¡§Classe¡¨ and 159 readings from the sensors.  Each ¡§Classe¡¨ represents a specific performance outcome. This dataset is unique in a way that while there are many variables, each are fundamentally the same, i.e. each set of three columns represents a sensor attached on different parts of the body.  Each sensor generates data according to its rotation around a spatial axis, giving spatial data on three dimensions. Hence all 159 columns of data are highly similar to each other. 
+The dataset contains 160 variables, which include one target variable ¡§Classe¡¨ and 159 readings from the sensors. Each ¡§Classe¡¨ represents a specific performance outcome. This dataset is unique in a way that while there are many variables, each are fundamentally the same, i.e. each set of three columns represents a sensor attached on different parts of the body.  Each sensor generates data according to its rotation around a spatial axis, giving spatial data on three dimensions. Hence all 159 columns of data are highly similar to each other [@velloso2013qualitative]. 
 
-The target variable classes is defined as below: 
+The target variable has the following levels: 
 
-<ol type="a">
-  <li>Class A: exactly according to the specification (i.e. performing the exercise correctly);</li>
-  <li>Class B: throwing the elbows to the front; </li>
-  <li>Class C: lifting the dumbbell only halfway;</li>
-  <li>Class D: lowering the dumbbell only halfway; and</li>
-  <li>Class E: throwing the hips to the front.</li>
-</ol>
+* Class A: exactly according to the specification (i.e. performing the exercise correctly);
+* Class B: throwing the elbows to the front;
+* Class C: lifting the dumbbell only halfway;
+* Class D: lowering the dumbbell only halfway; and
+* Class E: throwing the hips to the front.
+
 
 ## Data preparation
 
@@ -140,7 +155,19 @@ data <- data[,which(dataNA < .1)];
 `r ncol(data)` columns remains in the dataset post-cleaning. The following table lists the remaining variables 
 
 ```{r str data, results='markup'}
-str(data)
+summaryTable <- data.frame(variable = names(data),
+                           classe = sapply(data, typeof),
+                           first_values = sapply(data, function(x) paste0(head(x),  collapse = ", ")),
+                           row.names = NULL)
+
+if (knitr::is_latex_output())
+{
+  summaryTable;
+} else if (knitr::is_html_output())
+{
+  DT::datatable(summaryTable);
+}
+
 ```
 
 ### Slicing into training and testing sets
@@ -168,7 +195,7 @@ trainPC$classe <- train$classe;
 testPC <- predict(prComp, test[,1:ncol(test)-1]);
 testPC$classe <- test$classe;
 ```
-Here, PCA is able to reduce the dimension of the datasets from `r ncol(data) - 1` to `r ncol(trainPC)` while retaining 99% of the information. This reduces model complexity and improves scalability. 
+Here, PCA is able to reduce the dimension (number of predictors) of the datasets from `r ncol(data) - 1` to `r ncol(trainPC) - 1` while retaining 99% of the information. This reduces model complexity and improves scalability. 
 
 As a side note, PCA is usually performed on scaled  or normalised dataset to prevent the resulting principle sub-space from being dominated by variables with large scales. As mentioned above, because the variables in the dataset are of similar nature, scaling or normalised provides little added benefits. Hence such procedures are not used. 
 
@@ -202,13 +229,13 @@ gpairs_lower(g)
 ## Learning Models
 Seven learning methods are adopted in this report. Namely: 
 
-1. Decision Tree;
+1. Naive Bayes;
 1. K-Nearest Neighbour;
 1. Multinomial Logistic Regression;
-1. Naive Bayes;
-1. Neuro Network;
+1. Decision Tree;
+1. Tree Bagging.
 1. Random Forest;
-1. Tree Bagging.  
+1. Neuro Network;
 
 The methods can be classified as eager learner (Decision Tree, Tree Bagging, Random Forest, and Neuro Network) and lazy learner (K-Nearest Neighbour and Naive Bayes). The library `Caret` is used to generate training models .
 
@@ -217,13 +244,13 @@ The methods can be classified as eager learner (Decision Tree, Tree Bagging, Ran
 
 Cross Validation is performed on each training methods to infer model performance.
 
-### Choosing between LOOCV and K-Fold
+### Choosing between LOOCV and $k$-Fold
 
-Leave-One-Out Cross-Validation (LOOCV) and K-Fold are common resampling methods for accessing model performance. While LOOCV estimates test error with lowest bias (averaging validation errors across n models), K-Fold CV is much less computationally intensive. Yet there is another advantage to using K-fold CV. This has to do with a bias-variance trade-off.
+Leave-One-Out Cross-Validation (LOOCV) and $k$-Fold are common resampling methods for accessing model performance. While LOOCV estimates test error with lowest bias (averaging validation errors across n models), $k$-Fold CV is much less computationally intensive.  
 
-Estimates produced by LOOCV is plagued by high variance compared to that produced by K-fold CV. This is because each statistics (accuracy, AUC, F1, log loss etc) in LOOCV are produced by models trained on virtually identical datasets. The final averaged statistic is an average of statistics from n models which are highly positively correlated. On the other hand, K-fold CV outputs K (which is usually much less than n) statistics which are less correlated as there are less overlap among models. The average of strongly correlated quantities has higher variance than the average of weakly correlated quantities; hence the estimated statistics from LOOCV tends to have higher variance that that from K-fold. 
+Yet there is another advantage to using $k$-Fold CV: $k$-Fold CV often gives more accurate estimates of the test error; estimates produced by LOOCV is often plagued by high variance compared to that produced by $k$-Fold CV. This is because test errors in LOOCV are produced by models trained on virtually identical datasets. The final averaged statistic is an average of statistics from n models which are highly positively correlated. On the other hand, $k$-Fold CV outputs $k$ (which is usually much less than n) statistics which are less correlated as there are less overlap among models. The average of strongly correlated quantities has higher variance than the average of weakly correlated quantities; hence the estimated statistics from LOOCV tends to have higher variance than that from $k$-Fold [@james2013introduction]. 
 
-The dataset in the report consists of relatively large number of observations (`r ncol(trainPC)` rows). Hence a 10 fold cross-validation is performed.
+The dataset in the report consists of relatively large number of observations (`r nrow(trainPC)`). Hence a 10 fold cross-validation is performed.
 
 ### Performance Measures for Multi-Class Problems
 
@@ -245,6 +272,8 @@ tc <- caret::trainControl(method = "cv", #resampling method = cross validation
 metric <- "logLoss";
 ```
 
+Log loss aften work well wih multi-class problems. By setting the parameter metric to `logLoss`, model selection will be based on lowest log loss. 
+
 ```{r parallel processing}
 #Parallel Processing, leaves you one core for other stuff.
 #Plz try not to do CPU intensive tasks while modelling.
@@ -254,7 +283,7 @@ doParallel::registerDoParallel(cl);
 
 ## Lazy Learners
 
-Lazy learners simply store the training data without performing further munging, until a test dataset is presented. During model training, Lazy Learners require significantly less computational operation as there is no new algorithm being developed; for the same reason, Lazy Learners are slow when used for prediction because new data are used to compute predictions instead of relying on a pre-calculated algorithm.
+Lazy learners simply store the training data without performing further munging, until a test dataset is presented [@lazyeagerdefinition]. During model training, Lazy Learners require significantly less computational operation as there is no new algorithm being developed; for the same reason, Lazy Learners are slow when used for prediction because new data are used to compute predictions instead of relying on a pre-calculated algorithm.
 
 Naive Bayes and K-Nearest-Neighbour (KNN) are used in this section. Both lazy learners are expected to perform quickly on large datasets like the one used in this report. KNN relies heavily on Euclidean distance (L2 norm) between observations and is more appropriate on scaled or normalised data. Hence, this model is expected to perform less well than other data mining models used in this report.  
 ```{r lazy learners}
@@ -323,7 +352,7 @@ Decision Trees often produce predictions with low bias but high variance. The mo
 
 The idea behind tree bagging is to create many trees, each trained from bootstrapped data from the original dataset. Each tree is slightly different from each other because they are trained with mildly different datasets. Classification decision is then performed by popular vote across all trees. This method reduces variance by averaging decisions among many trees. There is a caveat though: tress turn out to be very similar to each other when there exists a (or few) extremely strong predictor, following by some moderately strong predictors.  Each tree will have similar node splitting because of these strong predictors, which renders each tree to have practicality the same decision rules. Unfortunately, as mentioned above, the variance of the averages of highly correlated quantities is also high. This means tree bagging provides little improvements in terms of variance reduction.
 
-Random Forest enhances tree bagging through a tweak: at each node split, the algorithm randomly picks a subset of size $m$ predictors out of all $p$, then choose the best predictor for this node split as normally seen in decision trees. This way, each tree is more likely to be different from each other. And hence their averages are less varying. The choice of $m$ is often the square root of $p$ but other method of choosing $m$ also exists.
+Random Forest enhances tree bagging through a tweak: at each node split, the algorithm randomly picks a subset of size $m$ predictors out of all $p$, then choose the best predictor for this node split as normally seen in decision trees. This way, each tree is more likely to be different from each other. And hence their averages are less varying. The choice of $m$ is often the square root of $p$ but other method of choosing $m$ also exists [@james2013introduction].
 
 ```{r tree_models}
 
@@ -386,7 +415,7 @@ Note that in the code above, both models `treebag` and `rf` employ the training 
 
 ## Neuro-Net
 
-R doesn't provide an easy way to model multilayer perceptron (Neuro Network). Hence a single-layer perceptron is modelled below. Neuro Networks tend to be scale invariant (just like tree based models): rescaling the input vector is equivalent to changing the weights and biases of the network, result in the exact same outputs as before.
+R doesn't provide an easy way to model multilayer perceptron (Neuro Network). Hence a single-layer perceptron is modelled below. Neuro Networks tend to be scale invariant (just like tree based models): rescaling the input vector is equivalent to changing the weights and biases of the network, resulting in the exact same outputs as before.
 ```{r neuro_net}
 if (file.exists("NN.rds"))
 {
@@ -443,49 +472,62 @@ metrics <- c("Accuracy", "AUC", "logLoss", "Mean_F1");
 
 lattice::dotplot(results, scales=scales,  metric=metrics, main="Model Performances");
 
-times <- c(nbTime[[3]], knnTime[[3]],
+times <- c(ctreeTime[[3]], knnTime[[3]],
            multinomTime[[3]],
-           ctreeTime[[3]], treebagTime[[3]], rfTime[[3]],
-           NNTime[[3]]) %>% round(., 3)
-models <- c("Naive Bayes", "KNN",
+           nbTime[[3]], rfTime[[3]], treebagTime[[3]],
+           NNTime[[3]]) %>% round(., 3);
+
+models <- c("Decision Tree", "KNN",
             "Multi Nomial",
-            "Decision Tree", "Tree Bagging", "Random Forest",
-            "Neuro-Net")
-elapsedTime <- data.frame(models = models, times = times) %>% arrange(times);
+            "Naive Bayes", "Random Forest", "Tree Bagging",
+            "Neuro-Net");
 
 
-timePlot <- ggplot2::ggplot(data=elapsedTime, aes(x=reorder(models, times), y=times)) +
+elapsedTime <- data.frame(Models = models, Seconds = times, stringsAsFactors=F) %>% arrange(times);
+elapsedTime$Models <- factor(elapsedTime$Models, levels=unique(elapsedTime$Models));
+elapsedTime$plotLabels <- paste("Training time in seconds: ", round(elapsedTime$Seconds,3), sep="");
+
+
+
+timePlot <- ggplot2::ggplot(data=elapsedTime, aes(x=Models, y=Seconds)) +
   ggplot2::geom_bar(stat="identity") +
   ggplot2::ggtitle("Training Time") +
   ggplot2::theme(plot.title = element_text(hjust = 0.5)) +
   ggplot2::xlab("Models") + 
-  ggplot2::ylab("Time (seconds)") + 
-  ggplot2::geom_text(ggplot2::aes(label=times), vjust=-.5);
-timePlot
+  ggplot2::ylab("Time (seconds)");
+
+if (knitr::is_latex_output())
+{
+  timePlot + ggplot2::geom_text(ggplot2::aes(label=times), vjust=-.5);
+} else if (knitr::is_html_output())
+{
+  plotly::ggplotly(p = timePlot);
+}
 ```
 
-Among the seven models, Random Forest, Tree Bagging and KNN outperform the other four models. Surprisingly, KNN appears to outperform all other models holistically: lowest log Loss value at `r summaryStat$logLoss["KNearestNeighbor","Mean"]`, highest Mean F1, Accuracy, and AUC at `r summaryStat$Mean_F1["KNearestNeighbor","Mean"]`, `r summaryStat$Accuracy["KNearestNeighbor","Mean"]`, `r summaryStat$AUC["KNearestNeighbor","Mean"]` respectively. In addition, KNN has the second lowest learning time (which is less surprising given its lazy learning nature) at `knnTime[[3]]` seconds (wall clock), beaten by Decision Tree only.
+Among the seven models, Random Forest, Tree Bagging and KNN outperform the other four models. Surprisingly, KNN appears to outperform all other models holistically: lowest log Loss value at `r summaryStat$logLoss["KNearestNeighbor","Mean"]`, highest Mean F1, Accuracy, and AUC at `r summaryStat$Mean_F1["KNearestNeighbor","Mean"]`, `r summaryStat$Accuracy["KNearestNeighbor","Mean"]`, `r summaryStat$AUC["KNearestNeighbor","Mean"]` respectively. In addition, KNN has the second lowest learning time (which is less surprising given its lazy learning nature) at `r knnTime[[3]]` seconds (wall clock), beaten by Decision Tree only.
 
 The training data used in the report remain at their original scale. KNN is supposed to suffer from  neighbors being aligned along the direction of the axis with the smaller range. This somewhat reaffirms the notion of the dataset having variables with similar scales and ranges. 
 
 KNN performs well at various metrics, as well as having a low training time. Thus, KNN is chosen as the final model to be tested.
 
 
-#Model Performance
+# Model Performance
 ```{r confusion matrix, results='markup'}
 confusion <- confusionMatrix(predict(knn, testPC), testPC$classe);
 confusion
 ```
 `KNN` is able to predict future data with `r confusion$overall[[1]]` accuracy and `r confusion$overall[[2]]` Kappa. 
 
-\newpage
-Models in this report were built on machine with the following specs
+# Final Remarks
+This analysis has perhaps debased the Neuro-Network model somewhat unfairly. Looking at the code at [Neuro-Net], 10 values are specified for the parameter `size`, and 8 values are specified for `decay`. At least 10 * 8 models with varying sizes are built and compared. This is sigificantly more model built than other methods. Nonetheless, the performance of such sophisticated algorithm underperforms other simpler models, hence discarded. 
 
-* Processor: Intel Xeon(R) CPU E5-2603 v4 @ 1.70GHz x 12
-* Memory: 31.3 GiB
-* Graphics: NVS 315/PCIe/SSE2
-* OS type: 64-bit
-* OS: ubuntu 16.04 LTS
+\newpage
+# Session Info
+```{r session}
+devtools::session_info()
+```
+
 
 \newpage
 # References
