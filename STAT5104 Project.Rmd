@@ -441,7 +441,7 @@ The parameter `size` specifies the number of units in the hidden layer. Sizes ra
 The parameter `decay` specifies the regularisation of the number of nodes: model with high node counts are more heavily penalised
 
 ```{r stopCluster}
-parallel::stopCluster(cl);
+#parallel::stopCluster(cl);
 ```
 
 ## Compare Models
