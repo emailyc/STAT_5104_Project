@@ -15,11 +15,6 @@ abstract: |
   This report explores the possibility of predicting human movement using spatial data of exercises. Seven data mining models are used to extract latent pattern from the dataset. The present study is successful in predicting various types of human physical movements with extremely high accuracy. Work are divided evenly among authors.
   
 output:
-  pdf_document:
-    number_sections: true
-    df_print: kable
-    highlight: tango
-    fig_caption: true
   html_document:
     keep_md: no
     toc: true # table of content true
@@ -31,6 +26,11 @@ output:
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
     code_folding: show
+  pdf_document:
+    number_sections: true
+    df_print: kable
+    highlight: tango
+    fig_caption: true
   word_document: default
 bibliography: r-references.bibtex
 csl: apa.csl  
@@ -50,7 +50,7 @@ gc();
 if (knitr::is_latex_output())
 {
   knitr::opts_chunk$set(echo = FALSE, cache=TRUE, results = TRUE, message=FALSE, warning=FALSE);
-} else if (knitr::is_html_output())
+} else
 {
   knitr::opts_chunk$set(echo = TRUE, cache=TRUE, results = TRUE, message=FALSE, warning=FALSE);
 }
@@ -97,8 +97,8 @@ set.seed(5104);
 
 \newpage
 # Introduction
-The research topic, Human Activity Recognition (HAR), is becoming more and more popular among the computing research community. In the traditional HAR research, researchers mainly focused on predicting what activity a person was performing at a specific point of time. Meanwhile, latest researchers have shifted the focus on ¡§how well¡¨ the activities have been performed.  In real-life, we can apply the ideas, for example, in sports training. 
-In this report, we explored the Weight Lifting Exercises Dataset and attempted to assess if the participants performed the specific weight lifting exercise, Unilateral Dumbbell Biceps Curl (hereafter refers to ¡§the exercise¡¨), correctly from the data collected via various sensors attached on different parts of the body, which includes arm, belt, forearm, and dumbbell.  The type of mistakes in the exercise can also be identified.
+The research topic, Human Activity Recognition (HAR), is becoming more and more popular among the computing research community. In the traditional HAR research, researchers mainly focused on predicting what activity a person was performing at a specific point of time. Meanwhile, latest researches have shifted the focus on ??how well?? the activities have been performed. In real-life, we can apply the ideas, for example, in sports training. 
+In this report, we explored the Weight Lifting Exercises Dataset and attempted to assess if the participants performed the specific weight lifting exercise, Unilateral Dumbbell Biceps Curl (hereafter refers to the exercise), correctly from the data collected via various sensors attached on different parts of the body, which includes arm, belt, forearm, and dumbbell.  The type of mistakes in the exercise can also be identified.
 Six male participants aged between 20-28 years were asked to wear a number of body sensors to perform one set of 10 repetitions of the exercise. Based on the sensor data collected, we can trace the outcome of the performance accordingly.  The performance outcome can be grouped into five classes, one corresponding to the specified execution of the exercise, while the other 4 classes corresponding to some common mistakes. Each sensor generated a set of readings in three dimensions [@velloso2013qualitative].
 
 
@@ -106,7 +106,7 @@ Six male participants aged between 20-28 years were asked to wear a number of bo
 
 The data for this project come from [this source](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv): https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv. 
 
-The dataset contains 160 variables, which include one target variable ¡§Classe¡¨ and 159 readings from the sensors. Each ¡§Classe¡¨ represents a specific performance outcome. This dataset is unique in a way that while there are many variables, each are fundamentally the same, i.e. each set of three columns represents a sensor attached on different parts of the body.  Each sensor generates data according to its rotation around a spatial axis, giving spatial data on three dimensions. Hence all 159 columns of data are highly similar to each other [@velloso2013qualitative]. 
+The dataset contains 160 variables, which include one target variable "Classe" and 159 readings from the sensors. Each "Classe" represents a specific performance outcome. This dataset is unique in a way that while there are many variables, each are fundamentally the same, i.e. each set of three columns represents a sensor attached on different parts of the body.  Each sensor generates data according to its rotation around a spatial axis, giving spatial data on three dimensions. Hence all 159 columns of data are highly similar to each other [@velloso2013qualitative]. 
 
 The target variable has the following levels: 
 
@@ -119,7 +119,7 @@ The target variable has the following levels:
 
 ## Data preparation
 
-Because of the following:
+For the following reasons:
 
 * Predictor with well-defined meaning
 * Similar scale
@@ -163,7 +163,7 @@ summaryTable <- data.frame(variable = names(data),
 if (knitr::is_latex_output())
 {
   summaryTable;
-} else if (knitr::is_html_output())
+} else
 {
   DT::datatable(summaryTable);
 }
@@ -238,7 +238,6 @@ Seven learning methods are adopted in this report. Namely:
 1. Neuro Network;
 
 The methods can be classified as eager learner (Decision Tree, Tree Bagging, Random Forest, and Neuro Network) and lazy learner (K-Nearest Neighbour and Naive Bayes). The library `Caret` is used to generate training models .
-
 
 ## Resampling: Cross Validation
 
@@ -324,6 +323,7 @@ if (file.exists("knn.rds"))
 
 ## Multinomial logistic regression
 
+Multinomial logistic regression posts no assumptions such as normality, linearity, or homoscedasticity. This makes it more flexible than other more powerful techniques such as discriminant analysis  [@starkweather2011multinomial]. 
 ```{r multinomial logistic regression}
 
 if (file.exists("multinom.rds"))
@@ -499,7 +499,7 @@ timePlot <- ggplot2::ggplot(data=elapsedTime, aes(x=Models, y=Seconds)) +
 if (knitr::is_latex_output())
 {
   timePlot + ggplot2::geom_text(ggplot2::aes(label=times), vjust=-.5);
-} else if (knitr::is_html_output())
+} else
 {
   plotly::ggplotly(p = timePlot);
 }
@@ -511,6 +511,7 @@ The training data used in the report remain at their original scale. KNN is supp
 
 KNN performs well at various metrics, as well as having a low training time. Thus, KNN is chosen as the final model to be tested.
 
+As a last note, Decision Tree has high variance across different metrics. This confirms earlier analysis on [Tree based models] regarding its drawback of having high variance. 
 
 # Model Performance
 ```{r confusion matrix, results='markup'}
@@ -519,8 +520,24 @@ confusion
 ```
 `KNN` is able to predict future data with `r confusion$overall[[1]]` accuracy and `r confusion$overall[[2]]` Kappa. 
 
-# Final Remarks
-This analysis has perhaps debased the Neuro-Network model somewhat unfairly. Looking at the code at [Neuro-Net], 10 values are specified for the parameter `size`, and 8 values are specified for `decay`. At least 10 * 8 models with varying sizes are built and compared. This is sigificantly more model built than other methods. Nonetheless, the performance of such sophisticated algorithm underperforms other simpler models, hence discarded. 
+# Discussion
+Predictive accuracy and trivial computational requirment have lead the authors to conclude the KNN algorithm as the final model. One might question why the more accurate models aren't used (Random Forest, Tree Bagging), given the fact that this report aims at tackling a prediction problem. First, a look at the model ojects may answer this question
+
+```{r model size}
+object.size(knn);
+object.size(rf);
+```
+One is about 5 times the size of the other. If a model is to be run on a smaller device, which sports devices usually are, a bigger model may cause storage problem. 
+
+Another reason for choosing a simpler model is interpretability. Using KNN, one can safely construe each particular exercise have similar spatial readings (close Euclidean distance). On the other hand, one may find elucidating exercise grouping using the Random Forest paradigm difficult. 
+
+## Final Remarks
+
+This report pays pittance regard to exploratory data analysis: apart from delineating the background, there are no graphical nor analytically insight of how variables might correlate to each other. Given the success of the KNN algorithm on this dataset, which is heavily distance based, there is a good chance that graphical tools can yield good explanation for KNN's ascendancy. Given the high dimension (`r ncol(data)`) nature of the data, as well as writing space limit, the authors have opted not to use graphical exploratory data analysis. 
+
+This analysis has perhaps debased the Neuro-Network model somewhat unfairly. Looking at the code at [Neuro-Net], 10 values are specified for the parameter `size`, and 8 values are specified for `decay`. At least 10 * 8 models with varying sizes are built and compared. This is significantly more model built than other methods. Nonetheless, the performance of such sophisticated algorithm under-performs other simpler models, hence discarded. 
+
+Had other data mining techniques been discussed in class, such as Support Vector Classifier, and Discriminant Analysis, more models would be tried here. 
 
 \newpage
 # Session Info
