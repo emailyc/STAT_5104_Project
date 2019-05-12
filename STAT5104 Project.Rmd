@@ -272,7 +272,7 @@ tc <- caret::trainControl(method = "cv", #resampling method = cross validation
 metric <- "logLoss";
 ```
 
-Log loss aften work well wih multi-class problems. By setting the parameter metric to `logLoss`, model selection will be based on lowest log loss. 
+Log loss often works well with multi-class problems. By setting the parameter metric to `logLoss`, model selection will be based on lowest log loss. 
 
 ```{r parallel processing}
 #Parallel Processing, leaves you one core for other stuff.
