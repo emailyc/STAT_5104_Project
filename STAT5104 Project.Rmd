@@ -13,13 +13,9 @@ author: |
 date: <center>`r format(Sys.time(), '%d %B, %Y')`</center>
 abstract: |
   This report explores the possibility of predicting human movement using spatial data of exercises. Seven data mining models are used to extract latent pattern from the dataset. The present study is successful in predicting various types of human physical movements with extremely high accuracy. Work are divided evenly among authors.
+  All code, R objects, and other supporting files can be found at [this Github repository](https://github.com/emailyc/STAT_5104_Project.git)
   
 output:
-  pdf_document:
-    number_sections: true
-    df_print: kable
-    highlight: tango
-    fig_caption: true
   html_document:
     keep_md: no
     toc: true # table of content true
@@ -31,14 +27,19 @@ output:
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
     code_folding: show
+  pdf_document:
+    number_sections: true
+    df_print: kable
+    highlight: tango
+    fig_caption: true
   word_document: default
 bibliography: r-references.bibtex
 csl: apa.csl  
 nocite: '@*'
 --- 
-
 \newpage
 \tableofcontents
+
 \newpage
 ```{r, echo=FALSE, results='hide'}
 remove(list=ls());
