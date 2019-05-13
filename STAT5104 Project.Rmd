@@ -15,6 +15,11 @@ abstract: |
   This report explores the possibility of predicting human movement using spatial data of exercises. Seven data mining models are used to extract latent pattern from the dataset. The present study is successful in predicting various types of human physical movements with extremely high accuracy. Work are divided evenly among authors.
   
 output:
+  pdf_document:
+    number_sections: true
+    df_print: kable
+    highlight: tango
+    fig_caption: true
   html_document:
     keep_md: no
     toc: true # table of content true
@@ -26,11 +31,6 @@ output:
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
     code_folding: show
-  pdf_document:
-    number_sections: true
-    df_print: kable
-    highlight: tango
-    fig_caption: true
   word_document: default
 bibliography: r-references.bibtex
 csl: apa.csl  
@@ -97,7 +97,7 @@ set.seed(5104);
 
 \newpage
 # Introduction
-The research topic, Human Activity Recognition (HAR), is becoming more and more popular among the computing research community. In the traditional HAR research, researchers mainly focused on predicting what activity a person was performing at a specific point of time. Meanwhile, latest researches have shifted the focus on ??how well?? the activities have been performed. In real-life, we can apply the ideas, for example, in sports training. 
+The research topic, Human Activity Recognition (HAR), is becoming more and more popular among the computing research community. In the traditional HAR research, researchers mainly focused on predicting what activity a person was performing at a specific point of time. Meanwhile, latest researches have shifted the focus on how well the activities have been performed. In real-life, we can apply the ideas, for example, in sports training. 
 In this report, we explored the Weight Lifting Exercises Dataset and attempted to assess if the participants performed the specific weight lifting exercise, Unilateral Dumbbell Biceps Curl (hereafter refers to the exercise), correctly from the data collected via various sensors attached on different parts of the body, which includes arm, belt, forearm, and dumbbell.  The type of mistakes in the exercise can also be identified.
 Six male participants aged between 20-28 years were asked to wear a number of body sensors to perform one set of 10 repetitions of the exercise. Based on the sensor data collected, we can trace the outcome of the performance accordingly.  The performance outcome can be grouped into five classes, one corresponding to the specified execution of the exercise, while the other 4 classes corresponding to some common mistakes. Each sensor generated a set of readings in three dimensions [@velloso2013qualitative].
 
@@ -106,7 +106,7 @@ Six male participants aged between 20-28 years were asked to wear a number of bo
 
 The data for this project come from [this source](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv): https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv. 
 
-The dataset contains 160 variables, which include one target variable "Classe" and 159 readings from the sensors. Each "Classe" represents a specific performance outcome. This dataset is unique in a way that while there are many variables, each are fundamentally the same, i.e. each set of three columns represents a sensor attached on different parts of the body.  Each sensor generates data according to its rotation around a spatial axis, giving spatial data on three dimensions. Hence all 159 columns of data are highly similar to each other [@velloso2013qualitative]. 
+The dataset contains 160 variables, which include one target variable "Class" and 159 readings from the sensors. Each "Class" represents a specific performance outcome. This dataset is unique in a way that while there are many variables, each are fundamentally the same, i.e. each set of three columns represents a sensor attached on different parts of the body.  Each sensor generates data according to its rotation around a spatial axis, giving spatial data on three dimensions. Hence all 159 columns of data are highly similar to each other [@velloso2013qualitative]. 
 
 The target variable has the following levels: 
 
@@ -186,7 +186,7 @@ dim(train);
 
 ## Principal Component Analysis
 
-Principal Component Analysis (PCA) is a dimension reduction technique. A reduced dataset allows faster processing and smaller storage. In the context of data mining, PCA reduce the number of variables to be used in a model by focusing only on the components accounting for the majority of the variance. Highly correlated variables are also removed as a result of PCA.
+Principal Component Analysis (PCA) is a dimension reduction technique. A reduced dataset allows faster processing and smaller storage. In the context of data mining, PCA reduces the number of variables to be used in a model by focusing only on the components accounting for the majority of the variance. Highly correlated variables are also removed as a result of PCA.
 
 ```{r PCA}
 prComp <- caret::preProcess(train[,-length(train)], method = "pca", thresh = 0.99);
@@ -230,14 +230,14 @@ gpairs_lower(g)
 Seven learning methods are adopted in this report. Namely: 
 
 1. Naive Bayes;
-1. K-Nearest Neighbour;
+1. K-Nearest Neighbor;
 1. Multinomial Logistic Regression;
 1. Decision Tree;
 1. Tree Bagging.
 1. Random Forest;
 1. Neuro Network;
 
-The methods can be classified as eager learner (Decision Tree, Tree Bagging, Random Forest, and Neuro Network) and lazy learner (K-Nearest Neighbour and Naive Bayes). The library `Caret` is used to generate training models .
+The methods can be classified as eager learner (Decision Tree, Tree Bagging, Random Forest, and Neuro Network) and lazy learner (K-Nearest Neighbor and Naive Bayes). The library `Caret` is used to generate training models .
 
 ## Resampling: Cross Validation
 
@@ -284,7 +284,7 @@ doParallel::registerDoParallel(cl);
 
 Lazy learners simply store the training data without performing further munging, until a test dataset is presented [@lazyeagerdefinition]. During model training, Lazy Learners require significantly less computational operation as there is no new algorithm being developed; for the same reason, Lazy Learners are slow when used for prediction because new data are used to compute predictions instead of relying on a pre-calculated algorithm.
 
-Naive Bayes and K-Nearest-Neighbour (KNN) are used in this section. Both lazy learners are expected to perform quickly on large datasets like the one used in this report. KNN relies heavily on Euclidean distance (L2 norm) between observations and is more appropriate on scaled or normalised data. Hence, this model is expected to perform less well than other data mining models used in this report.  
+Naive Bayes and K-Nearest-Neighbor (KNN) are used in this section. Both lazy learners are expected to perform quickly on large datasets like the one used in this report. KNN relies heavily on Euclidean distance (L2 norm) between observations and is more appropriate on scaled or normalised data. Hence, this model is expected to perform less well than other data mining models used in this report.  
 ```{r lazy learners}
 if (file.exists("nb.rds"))
 {
@@ -350,7 +350,7 @@ Tree-based methods tend to perform well on unprocessed data (i.e. without normal
 
 Decision Trees often produce predictions with low bias but high variance. The more complex the tree, the more apparent this becomes (overfitting). Methods have been proposed to overcome this issue. This includes Bootstrap Aggregation (Bagging), as well as Random Forest. 
 
-The idea behind tree bagging is to create many trees, each trained from bootstrapped data from the original dataset. Each tree is slightly different from each other because they are trained with mildly different datasets. Classification decision is then performed by popular vote across all trees. This method reduces variance by averaging decisions among many trees. There is a caveat though: tress turn out to be very similar to each other when there exists a (or few) extremely strong predictor, following by some moderately strong predictors.  Each tree will have similar node splitting because of these strong predictors, which renders each tree to have practicality the same decision rules. Unfortunately, as mentioned above, the variance of the averages of highly correlated quantities is also high. This means tree bagging provides little improvements in terms of variance reduction.
+The idea behind tree bagging is to create many trees, each trained from bootstrapped data from the original dataset. Each tree is slightly different from each other because they are trained with mildly different datasets. Classification decision is then performed by popular vote across all trees. This method reduces variance by averaging decisions among many trees. There is a caveat though: trees turn out to be very similar to each other when there exists a (or few) extremely strong predictor, following by some moderately strong predictors.  Each tree will have similar node splitting because of these strong predictors, which renders each tree to have practicality the same decision rules. Unfortunately, as mentioned above, the variance of the averages of highly correlated quantities is also high. This means tree bagging provides little improvements in terms of variance reduction.
 
 Random Forest enhances tree bagging through a tweak: at each node split, the algorithm randomly picks a subset of size $m$ predictors out of all $p$, then choose the best predictor for this node split as normally seen in decision trees. This way, each tree is more likely to be different from each other. And hence their averages are less varying. The choice of $m$ is often the square root of $p$ but other method of choosing $m$ also exists [@james2013introduction].
 
@@ -521,7 +521,7 @@ confusion
 `KNN` is able to predict future data with `r confusion$overall[[1]]` accuracy and `r confusion$overall[[2]]` Kappa. 
 
 # Discussion
-Predictive accuracy and trivial computational requirment have lead the authors to conclude the KNN algorithm as the final model. One might question why the more accurate models aren't used (Random Forest, Tree Bagging), given the fact that this report aims at tackling a prediction problem. First, a look at the model ojects may answer this question
+Predictive accuracy and trivial computational requirement have led the authors to conclude the KNN algorithm as the final model. One might question why the more accurate models aren't used (Random Forest, Tree Bagging), given the fact that this report aims at tackling a prediction problem. First, a look at the model objects may answer this question
 
 ```{r model size}
 object.size(knn);
